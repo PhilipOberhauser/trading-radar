@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--HEAD-->
+<title>Trading Radar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<!--/HEAD-->
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!--BODY-->
+<div class="app">
+  <header class="top">
+    <div class="brand"><h1>Trading Radar</h1><span>Marktstruktur · Stufe 1</span></div>
+
+    <div class="seg" id="marketSeg" role="group" aria-label="Markt">
+      <button type="button" data-market="stocks">Aktien</button>
+      <button type="button" data-market="futures">Futures</button>
+      <button type="button" data-market="crypto">Krypto</button>
+    </div>
+
+    <label class="field">Instrument
+      <select id="symbol"></select>
+    </label>
+
+    <div class="seg mono" id="tfSeg" role="group" aria-label="Zeitrahmen">
+      <button type="button" data-tf="5">5m</button>
+      <button type="button" data-tf="15">15m</button>
+      <button type="button" data-tf="60">1h</button>
+    </div>
+
+    <label class="field">Swings
+      <select id="swingSel">
+        <option value="2">fein</option>
+        <option value="3">normal</option>
+        <option value="5">grob</option>
+      </select>
+    </label>
+
+    <div class="status" id="status" role="status"><i></i><span>Lade Kursdaten …</span></div>
+  </header>
+
+  <div class="main">
+    <section class="chart-card" aria-label="Chart">
+      <div class="readout" id="readout"></div>
+      <div class="chart-wrap" id="chartWrap">
+        <canvas id="chart" tabindex="0" aria-label="Kerzenchart mit erkannten Mustern"></canvas>
+        <div class="zoom">
+          <button type="button" id="zout" aria-label="Herauszoomen">−</button>
+          <button type="button" id="zin" aria-label="Hineinzoomen">+</button>
+          <button type="button" id="znow" class="wide">Aktuell</button>
+        </div>
+      </div>
+      <div class="hint">Ziehen verschiebt, Mausrad oder zwei Finger zoomen, Antippen eines Objekts zeigt die Details.</div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Ebenen</h2>
+          <div class="seg small" id="modeSeg" role="group" aria-label="Darstellung">
+            <button type="button" data-mode="clean">Aufgeräumt</button>
+            <button type="button" data-mode="all">Alles</button>
+          </div>
+        </div>
+        <div class="layers" id="layers"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Inspector</h2></div>
+        <div id="inspector"><p class="insp-empty">Tippe im Chart auf eine Zone, Linie oder Markierung, um zu sehen, was erkannt wurde und warum.</p></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Ereignisse im Ausschnitt</h2></div>
+        <div class="events" id="events"></div>
+      </section>
+    </aside>
+  </div>
+
+  <p class="foot">Die Erkennung arbeitet nach festen Regeln auf abgeschlossenen Kerzen und ist keine Anlageberatung. Aktien- und Futures-Kurse von Yahoo Finance sind verzögert. Setup-Kandidaten sind noch nicht per Backtest geprüft.</p>
+</div>
+<!--/BODY-->
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
