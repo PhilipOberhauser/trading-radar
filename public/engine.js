@@ -1,5 +1,5 @@
 /*
- * Trading Radar – Erkennungs-Engine (Stufe 1)
+ * Trading Radar – Erkennungs-Engine und Backtest
  *
  * Reine Funktionen ohne Abhängigkeiten, laufen im Browser und in Node.
  * Jede Erkennung ist "kausal": ein Ereignis bei Kerze j benutzt nur Kerzen <= j.
@@ -224,5 +224,76 @@
     return R;
   }
 
-  return { atr: atr, aggregate: aggregate, analyze: analyze };
+  /**
+   * Stufe 2: macht aus Setup-Kandidaten regelbasierte Trades.
+   *   Einstieg  Limit-Order an der Kante des Order Blocks (Rücklauf nach dem Bruch)
+   *   Stop      hinter Sweep-Extrem bzw. Order Block, plus Puffer
+   *   Ziel      festes Vielfaches des Risikos (rr)
+   * Es läuft immer nur ein Trade gleichzeitig. Jeder nicht gehandelte
+   * Kandidat wird mit Begründung als Ablehnung festgehalten.
+   */
+  function backtest(cs, R, opt) {
+    opt = opt || {};
+    var RR = opt.rr || 2, WAIT = opt.wait || 30, MAXSTOP = opt.maxStop || 3, BUF = opt.buffer || 0.1;
+    var A = R.atr, n = cs.length, trades = [], refusals = [], busyUntil = -1;
+
+    R.setups.forEach(function (s) {
+      var j = s.i, a = A[j] || 1e-9, long = s.dir === 'long', k;
+      function refuse(reason) { refusals.push({ id: 'rf' + s.id, kind: 'refusal', setup: s, i: j, t: s.t, dir: s.dir, reason: reason }); }
+      if (!s.ob) return refuse('Kein Order Block, der Impuls war zu schwach');
+      if (j <= busyUntil) return refuse('Es lief bereits ein Trade');
+      var entry = long ? s.ob.top : s.ob.bottom;
+      var stop = long ? Math.min(s.sweep.extreme, s.ob.bottom) - BUF * a : Math.max(s.sweep.extreme, s.ob.top) + BUF * a;
+      var risk = Math.abs(entry - stop);
+      if (risk > MAXSTOP * a) return refuse('Stop zu weit entfernt (' + (risk / a).toFixed(1) + ' ATR)');
+      var target = long ? entry + RR * risk : entry - RR * risk;
+
+      var fill = -1, last = Math.min(n - 1, j + WAIT);
+      for (k = j + 1; k <= last; k++) {
+        if (long ? cs[k].l <= entry : cs[k].h >= entry) { fill = k; break; }
+        if (long ? cs[k].h >= target : cs[k].l <= target) return refuse('Ziel ohne Rücklauf zum Order Block erreicht');
+      }
+      var tr = { id: 'tr' + s.id, kind: 'trade', dir: s.dir, setup: s, i: j, t: s.t, entry: entry, stop: stop, target: target,
+        risk: risk, riskAtr: risk / a, rr: RR, fill: null, exit: null, exitPrice: null, status: 'pending', r: 0 };
+      if (fill < 0) {
+        if (j + WAIT <= n - 1) return refuse('Kein Rücklauf innerhalb von ' + WAIT + ' Kerzen');
+        trades.push(tr); busyUntil = n; return;        // Order wartet noch am Datenende
+      }
+      // Einstieg: bei einer Kurslücke über das Level hinweg zum Eröffnungskurs
+      var b0 = cs[fill];
+      if (long ? b0.o < entry : b0.o > entry) tr.entry = entry = b0.o;
+      tr.fill = fill; tr.status = 'open';
+      for (k = fill; k < n; k++) {
+        var b = cs[k];
+        if (k > fill && (long ? b.o <= stop : b.o >= stop)) { close(tr, k, b.o, 'loss'); break; }
+        if (long ? b.l <= stop : b.h >= stop) { close(tr, k, stop, 'loss'); break; }      // im Zweifel zuerst der Stop
+        if (k > fill && (long ? b.h >= target : b.l <= target)) { close(tr, k, target, 'win'); break; }
+      }
+      if (tr.status === 'open') tr.r = (long ? cs[n - 1].c - entry : entry - cs[n - 1].c) / risk;
+      trades.push(tr);
+      busyUntil = tr.exit == null ? n : tr.exit;
+    });
+
+    function close(tr, k, price, status) {
+      tr.exit = k; tr.exitPrice = price; tr.status = status;
+      tr.r = (tr.dir === 'long' ? price - tr.entry : tr.entry - price) / tr.risk;
+    }
+
+    // Kennzahlen über abgeschlossene Trades, in Vielfachen des Risikos (R)
+    var closed = trades.filter(function (t) { return t.exit != null; }).sort(function (x, y) { return x.exit - y.exit; });
+    var sum = 0, peak = 0, dd = 0, gw = 0, gl = 0, wins = 0, equity = [];
+    closed.forEach(function (t) {
+      sum += t.r; if (t.r > 0) { wins++; gw += t.r; } else gl -= t.r;
+      if (sum > peak) peak = sum; if (peak - sum > dd) dd = peak - sum;
+      equity.push({ i: t.exit, t: cs[t.exit].t, r: sum, trade: t });
+    });
+    return {
+      trades: trades, refusals: refusals, equity: equity,
+      stats: { closed: closed.length, wins: wins, losses: closed.length - wins, winRate: closed.length ? wins / closed.length : 0,
+        sumR: sum, avgR: closed.length ? sum / closed.length : 0, profitFactor: gl ? gw / gl : (gw ? Infinity : 0), maxDD: dd,
+        open: trades.length - closed.length, refusals: refusals.length, setups: R.setups.length }
+    };
+  }
+
+  return { atr: atr, aggregate: aggregate, analyze: analyze, backtest: backtest };
 });

@@ -14,7 +14,7 @@
 <!--BODY-->
 <div class="app">
   <header class="top">
-    <div class="brand"><h1>Trading Radar</h1><span>Marktstruktur · Stufe 1</span></div>
+    <div class="brand"><h1>Trading Radar</h1><span>Marktstruktur · Stufe 2</span></div>
 
     <div class="seg" id="marketSeg" role="group" aria-label="Markt">
       <button type="button" data-market="stocks">Aktien</button>
@@ -40,10 +40,24 @@
       </select>
     </label>
 
+    <label class="field">Ziel
+      <select id="rrSel">
+        <option value="1.5">1,5 R</option>
+        <option value="2">2 R</option>
+        <option value="3">3 R</option>
+      </select>
+    </label>
+
     <div class="status" id="status" role="status"><i></i><span>Lade Kursdaten …</span></div>
   </header>
 
-  <div class="main">
+  <nav class="nav" id="nav" aria-label="Ansicht">
+    <button type="button" data-view="chart">Chart</button>
+    <button type="button" data-view="auswertung">Auswertung</button>
+    <button type="button" data-view="uebersicht">Übersicht</button>
+  </nav>
+
+  <div class="main" id="view-chart">
     <section class="chart-card" aria-label="Chart">
       <div class="readout" id="readout"></div>
       <div class="chart-wrap" id="chartWrap">
@@ -81,10 +95,14 @@
     </aside>
   </div>
 
-  <p class="foot">Die Erkennung arbeitet nach festen Regeln auf abgeschlossenen Kerzen und ist keine Anlageberatung. Aktien- und Futures-Kurse von Yahoo Finance sind verzögert. Setup-Kandidaten sind noch nicht per Backtest geprüft.</p>
+  <section class="view" id="view-auswertung" hidden></section>
+  <section class="view" id="view-uebersicht" hidden></section>
+
+  <p class="foot">Die Erkennung arbeitet nach festen Regeln auf abgeschlossenen Kerzen und ist keine Anlageberatung. Aktien- und Futures-Kurse von Yahoo Finance sind verzögert. Der Backtest rechnet ohne Gebühren und Slippage; wenige Tage und wenige Trades sind keine belastbare Statistik.</p>
 </div>
 <!--/BODY-->
 <script src="engine.js"></script>
 <script src="app.js"></script>
+<script src="views.js"></script>
 </body>
 </html>

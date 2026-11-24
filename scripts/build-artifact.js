@@ -17,6 +17,7 @@ const out = [
   cut('BODY'),
   '<script>\n' + read('engine.js') + '</script>',
   '<script>\n' + read('app.js') + '</script>',
+  '<script>\n' + read('views.js') + '</script>',
 ].join('\n');
 const dist = path.join(__dirname, '..', 'dist');
 fs.mkdirSync(dist, { recursive: true });
